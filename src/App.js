@@ -14,7 +14,7 @@ function App() {
     <div className="app">
       <Logo />
       <Form mealList={meals} setMeals={setMeals} />
-      <MealList mealList={meals} />
+      <MealList mealList={meals} setMeals={setMeals} />
       <Stats />
     </div>
   );
@@ -30,6 +30,7 @@ function Form({ mealList, setMeals }) {
 
   function handleSubmit(e) {
     e.preventDefault();
+    if (!mealDesc || !mealType) return;
 
     const newMeal = { description: mealDesc, type: mealType, id: Date.now() };
 
@@ -39,6 +40,12 @@ function Form({ mealList, setMeals }) {
     <form className="add-form" onSubmit={handleSubmit}>
       <h3>What do you want to eat today</h3>
       <select value={mealType} onChange={(e) => setMealType(e.target.value)}>
+        {/* to create options from 1 to 20 */}
+        {/* {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (
+          <option value={num} key={num}>
+            {num}
+          </option>
+        ))} */}
         <option value="" label="Select meal type"></option>
         {mealTypes.map((type, index) => (
           <option value={type} label={type} key={index}></option>
@@ -55,25 +62,34 @@ function Form({ mealList, setMeals }) {
   );
 }
 
-function MealList({ mealList }) {
+function MealList({ mealList, setMeals }) {
   return (
     <div className="list">
       <ul>
         {mealList.map((meal) => (
-          <Meal meal={meal} key={meal.id} />
+          <Meal
+            meal={meal}
+            key={meal.id}
+            mealList={mealList}
+            setMeals={setMeals}
+          />
         ))}
       </ul>
     </div>
   );
 }
 
-function Meal({ meal }) {
+function Meal({ meal, mealList, setMeals }) {
+  function handleDelete() {
+    const updatedMeals = mealList.filter((m) => m.id !== meal.id);
+    setMeals(updatedMeals);
+  }
   return (
     <li>
       <span style={meal.eaten ? { textDecoration: "line-through" } : {}}>
         {meal.type}: {meal.description}
       </span>
-      <button>❌</button>
+      <button onClick={handleDelete}>❌</button>
     </li>
   );
 }

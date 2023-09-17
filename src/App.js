@@ -1,21 +1,48 @@
 import { useState } from "react";
 
 const initialMeals = [
-  { id: 1, description: "Scrumbled Eggs", type: "breakfast", eaten: true },
-  { id: 2, description: "Orange Juice", type: "breakfast", packed: false },
-  { id: 3, description: "Coffee", type: "breakfast", packed: false },
+  { id: 1, description: "Scrumbled Eggs", type: "Breakfast", consumed: false },
+  { id: 2, description: "Chips", type: "Snack", consumed: false },
 ];
 
 const mealTypes = ["Breakfast", "Lunch", "Snack", "Dinner"];
 
 function App() {
   const [meals, setMeals] = useState(initialMeals);
+
+  function handleAddMeal(meal) {
+    setMeals((meals) => [...meals, meal]);
+  }
+
+  function handleDeletMeal(id) {
+    setMeals((meals) => meals.filter((meal) => meal.id !== id));
+  }
+
+  function handleMealConsumed(id) {
+    setMeals((meals) =>
+      meals.map((meal) =>
+        meal.id === id ? { ...meal, consumed: !meal.consumed } : meal
+      )
+    );
+  }
+
+  function handleClearMeals() {
+    const confirm = window.confirm(
+      "Are you sure you want to remove all means?"
+    );
+    if (confirm) setMeals([]);
+  }
   return (
     <div className="app">
       <Logo />
-      <Form mealList={meals} setMeals={setMeals} />
-      <MealList mealList={meals} setMeals={setMeals} />
-      <Stats />
+      <Form onAddMeal={handleAddMeal} setMeals={setMeals} />
+      <MealList
+        meals={meals}
+        onDeleteMeal={handleDeletMeal}
+        onToggleConsumed={handleMealConsumed}
+        onClearMeals={handleClearMeals}
+      />
+      <Stats meals={meals} />
     </div>
   );
 }
@@ -24,7 +51,7 @@ function Logo() {
   return <h1>🫔 Meal Plan 🍱</h1>;
 }
 
-function Form({ mealList, setMeals }) {
+function Form({ onAddMeal }) {
   const [mealDesc, setMealDesc] = useState("");
   const [mealType, setMealType] = useState("");
 
@@ -32,9 +59,13 @@ function Form({ mealList, setMeals }) {
     e.preventDefault();
     if (!mealDesc || !mealType) return;
 
-    const newMeal = { description: mealDesc, type: mealType, id: Date.now() };
-
-    setMeals([...mealList, newMeal]);
+    const newMeal = {
+      description: mealDesc,
+      type: mealType,
+      id: Date.now(),
+      consumed: false,
+    };
+    onAddMeal(newMeal);
   }
   return (
     <form className="add-form" onSubmit={handleSubmit}>
@@ -62,42 +93,76 @@ function Form({ mealList, setMeals }) {
   );
 }
 
-function MealList({ mealList, setMeals }) {
+function MealList({ meals, onDeleteMeal, onToggleConsumed, onClearMeals }) {
+  const [sortBy, setSortBy] = useState("");
+  let sortedMeals;
+
+  if (!sortBy) sortedMeals = meals;
+  if (sortBy === "description")
+    sortedMeals = meals
+      .slice()
+      .sort((a, b) => a.description.localeCompare(b.description));
+  if (sortBy === "type")
+    sortedMeals = meals.slice().sort((a, b) => a.type.localeCompare(b.type));
+  if (sortBy === "consumed")
+    sortedMeals = meals
+      .slice()
+      .sort((a, b) => Number(a.consumed) - Number(b.consumed));
+
   return (
     <div className="list">
       <ul>
-        {mealList.map((meal) => (
+        {sortedMeals.map((meal) => (
           <Meal
             meal={meal}
             key={meal.id}
-            mealList={mealList}
-            setMeals={setMeals}
+            onDeleteMeal={onDeleteMeal}
+            onToggleConsumed={onToggleConsumed}
           />
         ))}
       </ul>
+      <div className="action">
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+          <option value="">Sort Input</option>
+          <option value="description">Sort by Meal description</option>
+          <option value="type">Sort by Meal type</option>
+          <option value="consumed">Sort by Consumed Status</option>
+          <option></option>
+        </select>
+        <button onClick={onClearMeals}>Clear Meals</button>
+      </div>
     </div>
   );
 }
 
-function Meal({ meal, mealList, setMeals }) {
-  function handleDelete() {
-    const updatedMeals = mealList.filter((m) => m.id !== meal.id);
-    setMeals(updatedMeals);
-  }
+function Meal({ meal, onDeleteMeal, onToggleConsumed }) {
   return (
     <li>
-      <span style={meal.eaten ? { textDecoration: "line-through" } : {}}>
+      <input
+        type="checkbox"
+        value={meal.consumed}
+        onChange={() => onToggleConsumed(meal.id)}
+      />
+      <span style={meal.consumed ? { textDecoration: "line-through" } : {}}>
         {meal.type}: {meal.description}
       </span>
-      <button onClick={handleDelete}>❌</button>
+      <button onClick={() => onDeleteMeal(meal.id)}>❌</button>
     </li>
   );
 }
 
-function Stats() {
+function Stats({ meals }) {
+  const totalMeals = meals.length;
+  const consumedMeals = meals.filter((meal) => meal.consumed).length;
+  const consumedByPercent = Math.round((consumedMeals / totalMeals) * 100);
   return (
     <em>
-      <footer className="stats">You have icluded x meals for the day</footer>
+      <footer className="stats">
+        {consumedByPercent === 100
+          ? "You have consumed all your meals for the day 🫄🏽"
+          : ` You have added ${totalMeals} meals for the day. You have already consumed
+        ${consumedMeals} (${consumedByPercent}%) of them`}
+      </footer>
     </em>
   );
 }
